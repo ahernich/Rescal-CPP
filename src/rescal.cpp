@@ -34,6 +34,10 @@ using rescal::Tensor;
 using namespace arma;
 using namespace std;
 
+/******************************************************************************
+ * Local data structures and functions
+ *****************************************************************************/
+
 namespace {
 
 /**
@@ -45,12 +49,6 @@ struct Coordinate
     uword col; ///< Index of a column in a matrix (0 <= col < number of columns)
 };
 
-}
-
-/******************************************************************************
- * Local functions
- *****************************************************************************/
-
 /**
  * Naive computation of the norm of a sparse matrix, without eigenvector 
  * decomposition. Might be slower than Armadillo's norm(), but can be used
@@ -61,12 +59,12 @@ struct Coordinate
  * \returns
  *   The squared norm of \p A.
  */
-static double naiveSquaredNorm(const sp_mat& A) 
+double naiveSquaredNorm(const sp_mat& A) 
 {
     long double norm = 0; 
     for (uword a : A)
         norm += a*a;
-    return sqrt(norm);
+    return norm;
 }
 
 /**
@@ -79,7 +77,7 @@ static double naiveSquaredNorm(const sp_mat& A)
  * \returns
  *   The norm of \p tensor.
  */
-static double computeSumNorm(const Tensor& tensor)
+double computeSumNorm(const Tensor& tensor)
 {
     double sumNorm = 0;
     for (const auto& slice : tensor) 
@@ -103,7 +101,7 @@ static double computeSumNorm(const Tensor& tensor)
  *   rows, starting from coordinate \p x.
  * \see Coordinate
  */
-static size_t dist(const Coordinate& x, const Coordinate& y, uword rows)
+size_t dist(const Coordinate& x, const Coordinate& y, uword rows)
 {
     if (x.col == y.col) 
         return y.row - x.row;
@@ -123,7 +121,7 @@ static size_t dist(const Coordinate& x, const Coordinate& y, uword rows)
  * \param[in] rows
  *   The number of rows of the matrix.
  */
-static void shiftCoordinate(Coordinate& coord, size_t shift, uword rows)
+void shiftCoordinate(Coordinate& coord, size_t shift, uword rows)
 {
     size_t targetPos {coord.col * rows + coord.row + shift};
     coord.row = targetPos % rows;
@@ -142,7 +140,7 @@ static void shiftCoordinate(Coordinate& coord, size_t shift, uword rows)
  * \returns
  *   The coordinate of the \p p th zero in \p A.
  */
-static Coordinate translate(const sp_mat& A, size_t p)
+Coordinate translate(const sp_mat& A, size_t p)
 {
     Coordinate cur {}; // current candidate coordinate
     for (auto it = A.begin(); it != A.end(); ++it)
@@ -178,7 +176,7 @@ static Coordinate translate(const sp_mat& A, size_t p)
  * \returns
  *   A vector containing exactly n coordinates at which A is zero.
  */
-static vector<Coordinate> sampleZeros(const sp_mat& A, size_t n) 
+vector<Coordinate> sampleZeros(const sp_mat& A, size_t n) 
 {
     vector<Coordinate> samples;
     const size_t n_zeros {A.n_rows * A.n_cols - A.n_nonzero}; // #zero positions
@@ -204,16 +202,18 @@ static vector<Coordinate> sampleZeros(const sp_mat& A, size_t n)
  * \returns
  *   The entry at coordinate \p coord in the matrix \p A * \p B * \p C.
  */
-static double productAt(const mat& A, 
-                        const mat& B, 
-                        const mat& C, 
-                        const Coordinate& coord)
+double productAt(const mat& A, 
+                 const mat& B, 
+                 const mat& C, 
+                 const Coordinate& coord)
 {
     long double prod = 0;
     for (uword i = 0; i != B.n_rows; ++i)
         for (uword j = 0; j != C.n_rows; ++j)
             prod += A(coord.row, i) * B(i, j) * C(j, coord.col);
     return prod;
+}
+
 }
 
 /******************************************************************************
