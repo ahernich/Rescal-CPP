@@ -1,16 +1,28 @@
-**rescal_als.h** provides a C++ implementation of the RESCAL-ALS algorithm 
-for learning a latent feature representation of a knowledge graph. 
-It is a translation of 
-the [original Python implementation](https://github.com/mnick/rescal.py) 
+# Rescal C++
+
+Rescal C++ is a C++ implementation of RESCAL-ALS, 
+an algorithm for learning a latent feature representation of a knowledge graph.
+This implementation is derived from the original
+[Python implementation of Rescal](https://github.com/mnick/rescal.py) 
 by Maximilian Nickel.
 
-## Installation
+## Compilation
 
-To install, simply copy rescal_als.h where your compiler can find it. 
-rescal_als.h depends on the following C++ libraries:
+Rescal C++ requires:
 
-* [Eigen](https://eigen.tuxfamily.org)
-* [Spectra](https://github.com/yixuan/spectra)
+* a C++ compiler supporting the C++ 11 standard or higher;
+* [Armadillo](http://arma.sourceforge.net) >= 8.500.
+
+To compile, 
+you will need to tell your compiler to use the C++ 11 standard
+and to link with libarmadillo.
+You may also want to enable optimization.
+For example:
+```
+g++ -c -std=c++11 -O2 -I<path to armadillo headers> rescal.cpp
+... compile other sources ...
+g++ rescal.o <other object files> -larmadillo
+```
 
 ## RESCAL-ALS
 
@@ -33,58 +45,59 @@ Given the tensor representation \f$X_1,\ldots,X_m\f$ of a knowledge graph with \
     X_i \approx A R_i A^T.
 \f]
 The matrix \f$A\f$ represents the entities of the knowledge base in terms of \f$r\f$ latent features, whereas \f$R_i\f$ represents the relationships between these features with respect to relation \f$i\f$.
-
+   
 ## Usage
 
-All functionality is provided through the class Rescal::ALS. 
+The class rescal::ALS provides the main interface to RESCAL-ALS. 
+The library uses the matrix datatypes (mat, sp_mat) 
+from [Armadillo](http://arma.sourceforge.net);
+please consult the excellent documentation to learn more about 
+how to work with matrices in Armadillo.
+
 The following example runs RESCAL-ALS 
 on the tensor representation \f$X_1,\ldots,X_m\f$ of a knowledge graph
 and outputs the factor matrices \f$A\f$ and \f$R_i\f$,
 along with the approximations \f$A R_i A^T\f$ of \f$X_i\f$:
-
-~~~{.cpp}
-#include <rescal_als.h>
+```c++
+#include <armadillo>
 #include <iostream>
+#include <rescal.h>
 
-using namespace Rescal;
+using namespace rescal;
 
 int main()
 {
-    // Prepare input tensor X for knowledge graph with n entities and m relations
-    // (SparseMatrix is imported from Eigen)
+  // Prepare input tensor X for knowledge graph with n entities and m relations
 
-    SparseMatrix<double> X1(n, n);
-    ...
+  arma::sp_mat X1(n, n);
+  // Initialize X1
 
-    ...
+  // ...
 
-    SparseMatrix<double> Xm(n, n);
-    ...
+  arma::sp_mat Xm(n, n);
+  // Initialize Xm
 
-    Tensor<double> X {X1, ..., Xm};
+  Tensor X {X1, ..., Xm};
 
-    // Run RESCAL-ALS to learn a representation of the knowledge graph in terms
-    // of r latent features. More precisely, run RESCAL-ALS to factor X into a 
-    // matrix A and matrices R[0], ..., R[m-1], where A has dimension n x r and 
-    // the R[i] have dimension r x r.
-    ALS<double> als(X, r);
-    als.compute();
+  // Run RESCAL-ALS to learn a representation of the knowledge graph in terms
+  // of r latent features. More precisely, run RESCAL-ALS to factor X into a 
+  // matrix A and matrices R[0], ..., R[m-1], where A has dimension n x r and 
+  // the R[i] have dimension r x r.
+  ALS als(X, r);
+  als.compute();
 
-    // Retrieve result
-    const Matrix<double>& A = als.getA();
-    const std::vector<Matrix<double>>& R = als.getRs();
+  // Retrieve result
+  const arma::mat& A = als.getA();
+  const std::vector<arma::mat>& Rs = als.getRs();
 
-    std::cout << "Factor matrix A:\n" << A << "\n\n";
-    for (int i = 0; i < m; i++) 
-    {
-        std::cout << "Factor matrix R[" << i << "]:\n" << R[i] << "\n\n";
-        std::cout << "A*R*A^T = \n" << (A * R[i] * A.transpose()) << "\n\n";
-    }
-
-    return 0;
+  std::cout << "Factor matrix A:\n" << A << "\n\n";
+  for (int i = 0; i != m; ++i) 
+  {
+    std::cout << "Factor matrix R[" << i << "]:\n" << Rs[i] << "\n\n";
+    std::cout << "A*R*A^T = \n" << (A * Rs[i] * A.t()) << "\n\n";
+  }
 }
-~~~
-
+```
 After constructing the tensor representation \f$X\f$ of the knowledge graph,
 we instantiate Rescal::ALS 
 by providing \f$X\f$ and the number \f$r\f$ of latent features to learn. 
@@ -100,4 +113,4 @@ André Hernich
 
 ## License
 
-rescal_als.h is licensed under the GPLv3 http://www.gnu.org/licenses/gpl-3.0.txt
+Rescal C++ is licensed under the GPLv3 http://www.gnu.org/licenses/gpl-3.0.txt
